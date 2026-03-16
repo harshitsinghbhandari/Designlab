@@ -466,6 +466,12 @@ transition: border-color 0.15s, transform 0.15s;
     <button class="toggle-btn on" id="thirdToggle" onclick="toggleThirds()">⅓ Thirds</button>
   </div>
 
+  <div class="ctrl-group">
+    <button class="toggle-btn" id="plotToggle" onclick="togglePlotMode()">⊕ Plot Points</button>
+    <button class="toggle-btn" onclick="clearPlotPoints()">✕ Clear Points</button>
+    <span class="ctrl-label" id="pointCountLabel" style="min-width:60px">0 pts</span>
+  </div>
+
   <div class="action-btns">
     <button class="act-btn freeze" id="freezeBtn" onclick="toggleFreeze()">❚❚ Freeze</button>
     <button class="act-btn snap" onclick="takeSnapshot()">⬤ Snapshot</button>
@@ -479,6 +485,7 @@ transition: border-color 0.15s, transform 0.15s;
   <div class="hint"><span class="hint-key">Freeze</span> pause to trace precisely</div>
   <div class="hint"><span class="hint-key">Snapshot</span> save with grid baked in</div>
   <div class="hint"><span class="hint-key">Grid Size</span> match your paper squares</div>
+  <div class="hint"><span class="hint-key">Plot Points</span> click grid to place dots · 3+ pts draws a fuzzy ellipse</div>
 </div>
 
 <!-- Snapshot strip -->
@@ -504,6 +511,12 @@ let frozen = false;
 let stream = null;
 let animFrame = null;
 let frozenImageData = null;
+
+// ── Plot-points state ──────────────────────────────────────────────────────
+let plotMode = false;
+let plotPoints = []; // stored as grid-cell indices {xi, yi}
+const ELLIPSE_STEPS = 100;
+let fuzzOffsets = []; // pre-computed wobble offsets so ellipse doesn't flicker
 
 const video = document.getElementById('videoEl');
 const canvas = document.getElementById('gridCanvas');
@@ -666,6 +679,57 @@ function drawGrid() {
       yi += majorEvery;
     }
   }
+
+  // ── Plot points & fuzzy ellipse ──────────────────────────────────────────
+  if (plotPoints.length > 0) {
+    ctx.save();
+    ctx.fillStyle = 'black';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+
+    // Draw each point as a filled circle at its grid intersection
+    for (const p of plotPoints) {
+      const px = p.xi * gridSize;
+      const py = p.yi * gridSize;
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fill();
+      // Small white ring so point is visible on bright backgrounds
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(px, py, 6.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 2;
+    }
+
+    // Fit and draw fuzzy ellipse when 3 or more points are present
+    if (plotPoints.length >= 3) {
+      const pixels = plotPoints.map(p => ({ x: p.xi * gridSize, y: p.yi * gridSize }));
+      const ell = fitEllipseToPoints(pixels);
+      if (ell) {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'black';
+        ctx.beginPath();
+        for (let i = 0; i <= ELLIPSE_STEPS; i++) {
+          const t = (i / ELLIPSE_STEPS) * Math.PI * 2;
+          const wobb = fuzzOffsets[i % fuzzOffsets.length] || 0;
+          const cosA = Math.cos(ell.angle), sinA = Math.sin(ell.angle);
+          const cosT = Math.cos(t), sinT = Math.sin(t);
+          const ex = ell.cx + (ell.a + wobb) * cosT * cosA - (ell.b + wobb) * sinT * sinA;
+          const ey = ell.cy + (ell.a + wobb) * cosT * sinA + (ell.b + wobb) * sinT * cosA;
+          if (i === 0) ctx.moveTo(ex, ey);
+          else ctx.lineTo(ex, ey);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
 }
 
 // ── Controls ───────────────────────────────────────────────────────────────
@@ -686,6 +750,79 @@ function toggleThirds() {
   showThirds = !showThirds;
   document.getElementById('thirdToggle').classList.toggle('on', showThirds);
 }
+
+// ── Plot-points helpers ────────────────────────────────────────────────────
+function regenerateFuzzOffsets() {
+  fuzzOffsets = Array.from({ length: ELLIPSE_STEPS + 1 }, () => (Math.random() - 0.5) * 6);
+}
+
+/**
+ * Fit an ellipse to a set of pixel points using PCA (covariance method).
+ * Returns { cx, cy, a, b, angle } or null when the points are collinear.
+ */
+function fitEllipseToPoints(pts) {
+  const n = pts.length;
+  const cx = pts.reduce((s, p) => s + p.x, 0) / n;
+  const cy = pts.reduce((s, p) => s + p.y, 0) / n;
+
+  let sxx = 0, sxy = 0, syy = 0;
+  for (const p of pts) {
+    const dx = p.x - cx, dy = p.y - cy;
+    sxx += dx * dx; sxy += dx * dy; syy += dy * dy;
+  }
+  sxx /= n; sxy /= n; syy /= n;
+
+  const trace = sxx + syy;
+  const det = sxx * syy - sxy * sxy;
+  const halfTrace = trace * 0.5;
+  const disc = Math.sqrt(Math.max(0, halfTrace * halfTrace - det));
+  const l1 = halfTrace + disc;
+  const l2 = halfTrace - disc;
+
+  const a = Math.sqrt(Math.max(1, l1)) * 2;
+  const b = Math.sqrt(Math.max(1, l2)) * 2;
+  if (a < 2 || b < 2) return null;
+
+  const angle = (Math.abs(sxy) > 1e-6) ? Math.atan2(l1 - sxx, sxy) : (sxx < syy ? Math.PI / 2 : 0);
+  return { cx, cy, a, b, angle };
+}
+
+function togglePlotMode() {
+  plotMode = !plotMode;
+  canvas.style.pointerEvents = plotMode ? 'auto' : 'none';
+  canvas.style.cursor = plotMode ? 'crosshair' : 'default';
+  document.getElementById('plotToggle').classList.toggle('on', plotMode);
+}
+
+function clearPlotPoints() {
+  plotPoints = [];
+  fuzzOffsets = [];
+  updatePointCountLabel();
+}
+
+function updatePointCountLabel() {
+  const n = plotPoints.length;
+  document.getElementById('pointCountLabel').textContent = n + ' pt' + (n !== 1 ? 's' : '');
+}
+
+// Canvas click: place a point snapped to the nearest grid intersection
+canvas.addEventListener('click', (e) => {
+  if (!plotMode) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const rawX = (e.clientX - rect.left) * scaleX;
+  const rawY = (e.clientY - rect.top) * scaleY;
+  const gridSize = parseInt(document.getElementById('gridSize').value);
+  const xi = Math.round(rawX / gridSize);
+  const yi = Math.round(rawY / gridSize);
+  // Ignore duplicate grid intersections
+  if (!plotPoints.some(p => p.xi === xi && p.yi === yi)) {
+    plotPoints.push({ xi, yi });
+    regenerateFuzzOffsets();
+    updatePointCountLabel();
+  }
+});
 
 // ── Freeze ─────────────────────────────────────────────────────────────────
 function toggleFreeze() {
