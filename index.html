@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DaVinci Graph Studio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+
+:root {
+–parchment: #f2ead8;
+–parchment-dark: #e8dcc4;
+–ink: #2a1f0e;
+–ink-faded: #4a3820;
+–sepia: #8b6914;
+–sepia-light: #c9a84c;
+–red-chalk: #8b2a1a;
+–blue-chalk: #2a4a6b;
+–grid-light: rgba(139, 105, 20, 0.12);
+–grid-main: rgba(139, 105, 20, 0.22);
+–grid-major: rgba(139, 105, 20, 0.38);
+}
+
+- { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+background: #1a140a;
+font-family: ‘Crimson Pro’, serif;
+color: var(–ink);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 24px 16px;
+background-image:
+radial-gradient(ellipse at 20% 50%, rgba(60,40,10,0.6) 0%, transparent 60%),
+radial-gradient(ellipse at 80% 20%, rgba(40,30,5,0.5) 0%, transparent 50%);
+}
+
+.studio-header {
+text-align: center;
+margin-bottom: 20px;
+position: relative;
+}
+
+.studio-header h1 {
+font-family: ‘IM Fell English SC’, serif;
+font-size: clamp(22px, 4vw, 38px);
+color: var(–sepia-light);
+letter-spacing: 0.08em;
+text-shadow: 0 2px 12px rgba(201, 168, 76, 0.3);
+line-height: 1.1;
+}
+
+.studio-header .subtitle {
+font-family: ‘IM Fell English’, serif;
+font-style: italic;
+color: #a08040;
+font-size: 14px;
+margin-top: 4px;
+letter-spacing: 0.04em;
+}
+
+.ornament {
+color: var(–sepia-light);
+font-size: 20px;
+opacity: 0.6;
+margin: 0 12px;
+}
+
+.main-layout {
+display: flex;
+gap: 16px;
+width: 100%;
+max-width: 1100px;
+align-items: flex-start;
+}
+
+/* SIDEBAR */
+.sidebar {
+width: 220px;
+flex-shrink: 0;
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+
+.panel {
+background: var(–parchment);
+border: 1px solid rgba(139,105,20,0.4);
+border-radius: 2px;
+padding: 14px;
+position: relative;
+box-shadow: 2px 3px 12px rgba(0,0,0,0.4), inset 0 0 30px rgba(139,105,20,0.05);
+}
+
+.panel::before {
+content: ‘’;
+position: absolute;
+inset: 3px;
+border: 0.5px solid rgba(139,105,20,0.15);
+pointer-events: none;
+border-radius: 1px;
+}
+
+.panel-title {
+font-family: ‘IM Fell English SC’, serif;
+font-size: 11px;
+letter-spacing: 0.12em;
+color: var(–sepia);
+margin-bottom: 10px;
+text-transform: uppercase;
+border-bottom: 0.5px solid rgba(139,105,20,0.3);
+padding-bottom: 6px;
+}
+
+.field-label {
+font-family: ‘Crimson Pro’, serif;
+font-size: 12px;
+color: var(–ink-faded);
+margin-bottom: 3px;
+font-style: italic;
+}
+
+.field-group { margin-bottom: 10px; }
+
+input[type=“text”], input[type=“number”], select, textarea {
+width: 100%;
+background: rgba(139,105,20,0.06);
+border: 0.5px solid rgba(139,105,20,0.35);
+border-radius: 1px;
+padding: 5px 7px;
+font-family: ‘Crimson Pro’, serif;
+font-size: 13px;
+color: var(–ink);
+outline: none;
+transition: border-color 0.2s, background 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+border-color: var(–sepia);
+background: rgba(139,105,20,0.1);
+}
+
+textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+
+.btn {
+font-family: ‘IM Fell English SC’, serif;
+letter-spacing: 0.1em;
+font-size: 12px;
+padding: 7px 14px;
+border: 1px solid;
+cursor: pointer;
+border-radius: 1px;
+transition: all 0.2s;
+width: 100%;
+display: block;
+text-align: center;
+}
+
+.btn-primary {
+background: var(–ink);
+color: var(–parchment);
+border-color: var(–ink);
+}
+.btn-primary:hover { background: var(–ink-faded); }
+
+.btn-secondary {
+background: transparent;
+color: var(–sepia);
+border-color: rgba(139,105,20,0.4);
+}
+.btn-secondary:hover { background: rgba(139,105,20,0.1); }
+
+.chart-type-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 6px;
+}
+
+.chart-type-btn {
+background: transparent;
+border: 0.5px solid rgba(139,105,20,0.35);
+border-radius: 1px;
+padding: 8px 4px;
+cursor: pointer;
+text-align: center;
+transition: all 0.2s;
+font-family: ‘Crimson Pro’, serif;
+}
+
+.chart-type-btn:hover { background: rgba(139,105,20,0.1); }
+.chart-type-btn.active {
+background: var(–ink);
+border-color: var(–ink);
+color: var(–parchment);
+}
+.chart-type-btn.active .ct-icon { filter: invert(1) sepia(1) saturate(0); opacity: 0.8; }
+
+.ct-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+.ct-label { font-size: 10px; letter-spacing: 0.05em; color: var(–ink-faded); }
+.chart-type-btn.active .ct-label { color: var(–parchment); opacity: 0.8; }
+
+/* COLOR SWATCHES */
+.color-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatch {
+width: 22px; height: 22px;
+border-radius: 50%;
+cursor: pointer;
+border: 2px solid transparent;
+transition: transform 0.15s, border-color 0.15s;
+}
+.swatch:hover { transform: scale(1.2); }
+.swatch.active { border-color: var(–ink); transform: scale(1.15); }
+
+/* CANVAS AREA */
+.canvas-area {
+flex: 1;
+min-width: 0;
+}
+
+.paper-wrap {
+background: var(–parchment);
+border: 1px solid rgba(139,105,20,0.4);
+border-radius: 2px;
+padding: 28px;
+box-shadow: 4px 6px 24px rgba(0,0,0,0.5), inset 0 0 60px rgba(139,105,20,0.06);
+position: relative;
+}
+
+.paper-wrap::after {
+content: ‘’;
+position: absolute;
+inset: 6px;
+border: 0.5px solid rgba(139,105,20,0.12);
+pointer-events: none;
+}
+
+/* Torn edge effect */
+.paper-wrap::before {
+content: ‘’;
+position: absolute;
+top: -2px; left: 0; right: 0;
+height: 4px;
+background: linear-gradient(90deg,
+var(–parchment) 0%, transparent 3%, var(–parchment) 5%, transparent 8%,
+var(–parchment) 10%, transparent 13%, var(–parchment) 16%,
+transparent 20%, var(–parchment) 22%, transparent 25%,
+var(–parchment) 27%, transparent 30%, var(–parchment) 33%,
+transparent 37%, var(–parchment) 39%, transparent 42%,
+var(–parchment) 44%, transparent 47%, var(–parchment) 50%,
+transparent 54%, var(–parchment) 56%, transparent 60%,
+var(–parchment) 62%, transparent 65%, var(–parchment) 68%,
+transparent 71%, var(–parchment) 74%, transparent 78%,
+var(–parchment) 80%, transparent 83%, var(–parchment) 87%,
+transparent 90%, var(–parchment) 93%, transparent 97%, var(–parchment) 100%);
+}
+
+.chart-title-display {
+text-align: center;
+margin-bottom: 12px;
+font-family: ‘IM Fell English’, serif;
+font-size: 18px;
+color: var(–ink);
+font-style: italic;
+letter-spacing: 0.02em;
+}
+
+.chart-subtitle-display {
+text-align: center;
+font-size: 12px;
+color: var(–ink-faded);
+margin-top: -8px;
+margin-bottom: 14px;
+font-style: italic;
+}
+
+canvas#graphCanvas {
+display: block;
+width: 100%;
+cursor: crosshair;
+}
+
+.annotations-bar {
+display: flex;
+gap: 8px;
+margin-top: 12px;
+align-items: center;
+flex-wrap: wrap;
+}
+
+.anno-btn {
+font-family: ‘Crimson Pro’, serif;
+font-size: 12px;
+font-style: italic;
+background: transparent;
+border: 0.5px solid rgba(139,105,20,0.35);
+padding: 4px 10px;
+cursor: pointer;
+color: var(–sepia);
+border-radius: 1px;
+transition: background 0.15s;
+}
+.anno-btn:hover { background: rgba(139,105,20,0.1); }
+.anno-btn.active { background: var(–sepia); color: var(–parchment); }
+
+.anno-note {
+font-family: ‘IM Fell English’, serif;
+font-style: italic;
+font-size: 11px;
+color: var(–ink-faded);
+margin-left: auto;
+}
+
+/* Data series rows */
+.series-row {
+display: flex;
+align-items: center;
+gap: 6px;
+margin-bottom: 6px;
+padding: 5px 7px;
+background: rgba(139,105,20,0.04);
+border: 0.5px solid rgba(139,105,20,0.2);
+border-radius: 1px;
+}
+
+.series-color-dot {
+width: 12px; height: 12px;
+border-radius: 50%;
+flex-shrink: 0;
+border: 1px solid rgba(0,0,0,0.2);
+}
+
+.series-name {
+font-family: ‘Crimson Pro’, serif;
+font-size: 12px;
+color: var(–ink-faded);
+flex: 1;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+
+.series-del {
+background: none;
+border: none;
+color: var(–red-chalk);
+cursor: pointer;
+font-size: 14px;
+padding: 0 2px;
+opacity: 0.6;
+transition: opacity 0.15s;
+}
+.series-del:hover { opacity: 1; }
+
+.margin-note {
+position: absolute;
+right: -8px;
+font-family: ‘IM Fell English’, serif;
+font-style: italic;
+font-size: 10px;
+color: rgba(139,105,20,0.5);
+writing-mode: vertical-rl;
+top: 40%;
+transform: rotate(180deg);
+letter-spacing: 0.06em;
+}
+
+.footer-note {
+text-align: center;
+margin-top: 14px;
+font-family: ‘IM Fell English’, serif;
+font-style: italic;
+font-size: 11px;
+color: rgba(201,168,76,0.4);
+letter-spacing: 0.04em;
+}
+
+@media (max-width: 700px) {
+.main-layout { flex-direction: column; }
+.sidebar { width: 100%; }
+}
+</style>
+
+</head>
+<body>
+
+<div class="studio-header">
+  <h1><span class="ornament">✦</span> DaVinci Graph Studio <span class="ornament">✦</span></h1>
+  <div class="subtitle">Observations & Measurements — Recorded with Care</div>
+</div>
+
+<div class="main-layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+```
+<!-- Chart Type -->
+<div class="panel">
+  <div class="panel-title">Chart Form</div>
+  <div class="chart-type-grid">
+    <button class="chart-type-btn active" onclick="setChartType('bar',this)">
+      <span class="ct-icon">▮▮▮</span><span class="ct-label">Bar</span>
+    </button>
+    <button class="chart-type-btn" onclick="setChartType('line',this)">
+      <span class="ct-icon">⌇⌇⌇</span><span class="ct-label">Line</span>
+    </button>
+    <button class="chart-type-btn" onclick="setChartType('scatter',this)">
+      <span class="ct-icon">⁘ ⁘ ⁘</span><span class="ct-label">Scatter</span>
+    </button>
+    <button class="chart-type-btn" onclick="setChartType('area',this)">
+      <span class="ct-icon">◿◿◿</span><span class="ct-label">Area</span>
+    </button>
+    <button class="chart-type-btn" onclick="setChartType('pie',this)">
+      <span class="ct-icon">◑</span><span class="ct-label">Pie</span>
+    </button>
+    <button class="chart-type-btn" onclick="setChartType('donut',this)">
+      <span class="ct-icon">◎</span><span class="ct-label">Donut</span>
+    </button>
+  </div>
+</div>
+
+<!-- Titles -->
+<div class="panel">
+  <div class="panel-title">Inscription</div>
+  <div class="field-group">
+    <div class="field-label">Title</div>
+    <input type="text" id="chartTitle" value="Observations, Anno Domini" placeholder="Chart title..." oninput="render()">
+  </div>
+  <div class="field-group">
+    <div class="field-label">Subtitle</div>
+    <input type="text" id="chartSubtitle" value="as measured with utmost precision" placeholder="Subtitle..." oninput="render()">
+  </div>
+  <div class="field-group">
+    <div class="field-label">X-Axis Label</div>
+    <input type="text" id="xLabel" value="Dimension" placeholder="X axis..." oninput="render()">
+  </div>
+  <div class="field-group">
+    <div class="field-label">Y-Axis Label</div>
+    <input type="text" id="yLabel" value="Magnitude" placeholder="Y axis..." oninput="render()">
+  </div>
+</div>
+
+<!-- Data Input -->
+<div class="panel">
+  <div class="panel-title">Data Series</div>
+  <div class="field-group">
+    <div class="field-label">Series Name</div>
+    <input type="text" id="newSeriesName" placeholder="e.g. Observations A">
+  </div>
+  <div class="field-group">
+    <div class="field-label">Labels (comma-sep)</div>
+    <input type="text" id="newLabels" placeholder="Jan, Feb, Mar...">
+  </div>
+  <div class="field-group">
+    <div class="field-label">Values (comma-sep)</div>
+    <textarea id="newValues" placeholder="12, 34, 28, 55..."></textarea>
+  </div>
+  <div class="color-swatches" id="colorSwatches" style="margin-bottom:10px;"></div>
+  <button class="btn btn-primary" onclick="addSeries()">+ Add Series</button>
+
+  <div id="seriesList" style="margin-top:10px;"></div>
+
+  <button class="btn btn-secondary" style="margin-top:8px;" onclick="loadSample()">Load Sample Data</button>
+</div>
+
+<!-- Grid Settings -->
+<div class="panel">
+  <div class="panel-title">Grid & Style</div>
+  <div class="field-group">
+    <div class="field-label">Grid Style</div>
+    <select id="gridStyle" onchange="render()">
+      <option value="fine">Fine Quadrille</option>
+      <option value="standard" selected>Standard</option>
+      <option value="major">Major Lines Only</option>
+      <option value="dot">Dotted</option>
+    </select>
+  </div>
+  <div class="field-group">
+    <div class="field-label">Sketch Weight</div>
+    <select id="sketchWeight" onchange="render()">
+      <option value="light">Light Hand</option>
+      <option value="medium" selected>Medium</option>
+      <option value="bold">Heavy Stroke</option>
+    </select>
+  </div>
+  <div class="field-group" id="showLegendField">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-style:italic;font-size:13px;color:var(--ink-faded);">
+      <input type="checkbox" id="showLegend" checked onchange="render()"> Show Legend
+    </label>
+  </div>
+</div>
+```
+
+  </div>
+
+  <!-- CANVAS AREA -->
+
+  <div class="canvas-area">
+    <div class="paper-wrap" style="position:relative;">
+      <span class="margin-note">studivm leonardi · mcmxxvi</span>
+      <div class="chart-title-display" id="titleDisplay">Observations, Anno Domini</div>
+      <div class="chart-subtitle-display" id="subtitleDisplay">as measured with utmost precision</div>
+      <canvas id="graphCanvas" width="700" height="440"></canvas>
+      <div class="annotations-bar">
+        <button class="anno-btn active" onclick="setTool('select',this)">✦ Select</button>
+        <button class="anno-btn" onclick="setTool('note',this)">✎ Annotate</button>
+        <button class="anno-btn" onclick="setTool('measure',this)">⊹ Measure</button>
+        <span class="anno-note" id="annoNote">Click to interact · drag to pan</span>
+      </div>
+    </div>
+    <div class="footer-note">DaVinci Graph Studio · Every measurement is an act of discovery</div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+const PALETTE = [
+  '#2a1f0e', // ink
+  '#8b6914', // sepia
+  '#8b2a1a', // red chalk
+  '#2a4a6b', // blue chalk
+  '#3d6b2a', // green
+  '#6b3d6b', // violet
+  '#6b4f2a', // brown
+  '#1a6b5a', // teal
+];
+
+let state = {
+  chartType: 'bar',
+  series: [],
+  selectedColor: PALETTE[1],
+  activeTool: 'select',
+  annotations: [],
+  mousePos: null,
+};
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+function init() {
+  // Build color swatches
+  const sw = document.getElementById('colorSwatches');
+  PALETTE.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.className = 'swatch' + (i === 1 ? ' active' : '');
+    d.style.background = c;
+    d.title = c;
+    d.onclick = () => {
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+      d.classList.add('active');
+      state.selectedColor = c;
+    };
+    sw.appendChild(d);
+  });
+
+  loadSample();
+  setupCanvas();
+}
+
+function loadSample() {
+  state.series = [
+    { name: 'Specimen A', labels: ['I','II','III','IV','V','VI','VII'], values: [18,32,27,48,39,55,42], color: PALETTE[1] },
+    { name: 'Specimen B', labels: ['I','II','III','IV','V','VI','VII'], values: [10,18,35,22,44,30,50], color: PALETTE[2] },
+  ];
+  updateSeriesList();
+  render();
+}
+
+// ─── Series Management ────────────────────────────────────────────────────────
+function addSeries() {
+  const name = document.getElementById('newSeriesName').value.trim() || 'Series';
+  const labelsRaw = document.getElementById('newLabels').value;
+  const valuesRaw = document.getElementById('newValues').value;
+
+  const values = valuesRaw.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+  if (!values.length) { alert('Please enter at least one value.'); return; }
+
+  const labels = labelsRaw ? labelsRaw.split(',').map(l => l.trim()) : values.map((_,i) => String(i+1));
+
+  state.series.push({ name, labels, values, color: state.selectedColor });
+  document.getElementById('newSeriesName').value = '';
+  document.getElementById('newLabels').value = '';
+  document.getElementById('newValues').value = '';
+  updateSeriesList();
+  render();
+}
+
+function removeSeries(i) {
+  state.series.splice(i, 1);
+  updateSeriesList();
+  render();
+}
+
+function updateSeriesList() {
+  const el = document.getElementById('seriesList');
+  el.innerHTML = '';
+  state.series.forEach((s, i) => {
+    el.innerHTML += `
+      <div class="series-row">
+        <div class="series-color-dot" style="background:${s.color}"></div>
+        <span class="series-name">${s.name}</span>
+        <button class="series-del" onclick="removeSeries(${i})">✕</button>
+      </div>`;
+  });
+}
+
+// ─── Chart Type ────────────────────────────────────────────────────────────────
+function setChartType(type, btn) {
+  state.chartType = type;
+  document.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function setTool(tool, btn) {
+  state.activeTool = tool;
+  document.querySelectorAll('.anno-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const notes = { select: 'Click to interact · drag to pan', note: 'Click on canvas to add annotation', measure: 'Click two points to measure distance' };
+  document.getElementById('annoNote').textContent = notes[tool] || '';
+}
+
+// ─── Canvas Setup ─────────────────────────────────────────────────────────────
+let annotations = [];
+let pendingAnnotation = null;
+
+function setupCanvas() {
+  const canvas = document.getElementById('graphCanvas');
+  canvas.addEventListener('click', (e) => {
+    if (state.activeTool === 'note') {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      const text = prompt('Annotation text:');
+      if (text) {
+        annotations.push({ x, y, text });
+        render();
+      }
+    }
+  });
+}
+
+// ─── Rendering ────────────────────────────────────────────────────────────────
+function render() {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Update title displays
+  document.getElementById('titleDisplay').textContent = document.getElementById('chartTitle').value;
+  document.getElementById('subtitleDisplay').textContent = document.getElementById('chartSubtitle').value;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background parchment
+  const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+  bgGrad.addColorStop(0, '#f5edda');
+  bgGrad.addColorStop(0.5, '#f2e8d4');
+  bgGrad.addColorStop(1, '#ede3cc');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Parchment texture noise (subtle)
+  for (let i = 0; i < 800; i++) {
+    const tx = Math.random() * W, ty = Math.random() * H;
+    ctx.fillStyle = `rgba(${Math.random()>0.5?100:160},${Math.random()>0.5?80:120},30,${Math.random()*0.04})`;
+    ctx.fillRect(tx, ty, 1, 1);
+  }
+
+  drawGrid(ctx, W, H);
+
+  if (!state.series.length) {
+    ctx.fillStyle = 'rgba(139,105,20,0.25)';
+    ctx.font = 'italic 16px "IM Fell English", serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data — add a series to begin your observations', W/2, H/2);
+    return;
+  }
+
+  const pad = { top: 30, right: 30, bottom: 55, left: 58 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+
+  if (state.chartType === 'pie' || state.chartType === 'donut') {
+    drawPie(ctx, W, H, state.chartType === 'donut');
+  } else {
+    drawAxes(ctx, W, H, pad, chartW, chartH);
+    if (state.chartType === 'bar') drawBar(ctx, pad, chartW, chartH);
+    if (state.chartType === 'line') drawLine(ctx, pad, chartW, chartH, false);
+    if (state.chartType === 'area') drawLine(ctx, pad, chartW, chartH, true);
+    if (state.chartType === 'scatter') drawScatter(ctx, pad, chartW, chartH);
+    drawAxisLabels(ctx, W, H, pad);
+  }
+
+  if (document.getElementById('showLegend').checked) drawLegend(ctx, W, H);
+  drawAnnotations(ctx);
+}
+
+function drawGrid(ctx, W, H) {
+  const gStyle = document.getElementById('gridStyle').value;
+  const pad = { top: 30, right: 30, bottom: 55, left: 58 };
+
+  if (gStyle === 'dot') {
+    // Dot grid
+    ctx.fillStyle = 'rgba(139,105,20,0.25)';
+    const step = 20;
+    for (let x = pad.left; x <= W - pad.right; x += step) {
+      for (let y = pad.top; y <= H - pad.bottom; y += step) {
+        ctx.beginPath();
+        ctx.arc(x, y, 1, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+    return;
+  }
+
+  const configs = {
+    fine:     { minor: 10, major: 50,  minorAlpha: 0.10, majorAlpha: 0.28 },
+    standard: { minor: 20, major: 100, minorAlpha: 0.13, majorAlpha: 0.32 },
+    major:    { minor: 0,  major: 50,  minorAlpha: 0,    majorAlpha: 0.35 },
+  };
+  const cfg = configs[gStyle] || configs.standard;
+
+  // Minor lines
+  if (cfg.minor) {
+    ctx.strokeStyle = `rgba(139,105,20,${cfg.minorAlpha})`;
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([]);
+    for (let x = pad.left; x <= W - pad.right; x += cfg.minor) {
+      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
+    }
+    for (let y = pad.top; y <= H - pad.bottom; y += cfg.minor) {
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    }
+  }
+
+  // Major lines
+  ctx.strokeStyle = `rgba(139,105,20,${cfg.majorAlpha})`;
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([]);
+  for (let x = pad.left; x <= W - pad.right; x += cfg.major) {
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
+  }
+  for (let y = pad.top; y <= H - pad.bottom; y += cfg.major) {
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+  }
+
+  ctx.setLineDash([]);
+}
+
+function getMaxVal() {
+  let max = 0;
+  state.series.forEach(s => s.values.forEach(v => { if (v > max) max = v; }));
+  return max || 100;
+}
+
+function getAllLabels() {
+  let labels = [];
+  state.series.forEach(s => { if (s.labels.length > labels.length) labels = s.labels; });
+  return labels;
+}
+
+function strokeWeight() {
+  const w = document.getElementById('sketchWeight').value;
+  return { light: 1.2, medium: 2, bold: 3.2 }[w] || 2;
+}
+
+function drawAxes(ctx, W, H, pad, chartW, chartH) {
+  const maxVal = getMaxVal();
+  const niceMax = Math.ceil(maxVal * 1.1 / 10) * 10;
+  const ink = '#2a1f0e';
+  const sw = strokeWeight();
+
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = sw * 0.9;
+  ctx.setLineDash([]);
+
+  // Y axis
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top);
+  ctx.lineTo(pad.left, pad.top + chartH);
+  ctx.stroke();
+
+  // X axis
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top + chartH);
+  ctx.lineTo(pad.left + chartW, pad.top + chartH);
+  ctx.stroke();
+
+  // Small tick serif marks
+  ctx.lineWidth = sw * 0.5;
+  const yTicks = 6;
+  for (let i = 0; i <= yTicks; i++) {
+    const y = pad.top + chartH - (i / yTicks) * chartH;
+    const val = Math.round((i / yTicks) * niceMax);
+    ctx.beginPath();
+    ctx.moveTo(pad.left - 5, y);
+    ctx.lineTo(pad.left, y);
+    ctx.stroke();
+    ctx.fillStyle = '#4a3820';
+    ctx.font = `11px "Crimson Pro", serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText(val, pad.left - 8, y + 4);
+  }
+
+  // X ticks
+  const labels = getAllLabels();
+  const n = labels.length;
+  const barW = chartW / n;
+  for (let i = 0; i < n; i++) {
+    const x = pad.left + (i + 0.5) * barW;
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top + chartH);
+    ctx.lineTo(x, pad.top + chartH + 5);
+    ctx.stroke();
+    ctx.fillStyle = '#4a3820';
+    ctx.font = `11px "Crimson Pro", serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], x, pad.top + chartH + 16);
+  }
+}
+
+function drawAxisLabels(ctx, W, H, pad) {
+  const xl = document.getElementById('xLabel').value;
+  const yl = document.getElementById('yLabel').value;
+  const chartH = H - pad.top - pad.bottom;
+  const chartW = W - pad.left - pad.right;
+
+  ctx.fillStyle = '#4a3820';
+  ctx.font = `italic 13px "Crimson Pro", serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(xl, pad.left + chartW / 2, H - 8);
+
+  ctx.save();
+  ctx.translate(14, pad.top + chartH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(yl, 0, 0);
+  ctx.restore();
+}
+
+function drawBar(ctx, pad, chartW, chartH) {
+  const maxVal = getMaxVal();
+  const niceMax = Math.ceil(maxVal * 1.1 / 10) * 10;
+  const labels = getAllLabels();
+  const n = labels.length;
+  const sw = strokeWeight();
+  const nSeries = state.series.length;
+  const groupW = chartW / n;
+  const barW = Math.max(8, groupW / nSeries - 4);
+
+  state.series.forEach((s, si) => {
+    s.values.forEach((v, i) => {
+      const barH = (v / niceMax) * chartH;
+      const x = pad.left + i * groupW + si * (groupW / nSeries) + (groupW / nSeries - barW) / 2;
+      const y = pad.top + chartH - barH;
+
+      // Sketch-style fill with slight hatch
+      ctx.fillStyle = hexToRgba(s.color, 0.22);
+      ctx.fillRect(x, y, barW, barH);
+
+      // Hatch lines for texture
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, barW, barH);
+      ctx.clip();
+      ctx.strokeStyle = hexToRgba(s.color, 0.3);
+      ctx.lineWidth = 0.7;
+      for (let hx = x - barH; hx < x + barW + barH; hx += 6) {
+        ctx.beginPath();
+        ctx.moveTo(hx, y);
+        ctx.lineTo(hx + barH, y + barH);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Border - slightly wobbly
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = sw;
+      ctx.beginPath();
+      ctx.rect(x, y, barW, barH);
+      ctx.stroke();
+
+      // Value label
+      ctx.fillStyle = s.color;
+      ctx.font = `bold 10px "Crimson Pro", serif`;
+      ctx.textAlign = 'center';
+      if (barH > 16) ctx.fillText(v, x + barW / 2, y - 4);
+    });
+  });
+}
+
+function drawLine(ctx, pad, chartW, chartH, isArea) {
+  const maxVal = getMaxVal();
+  const niceMax = Math.ceil(maxVal * 1.1 / 10) * 10;
+  const labels = getAllLabels();
+  const n = labels.length;
+  const sw = strokeWeight();
+
+  state.series.forEach((s) => {
+    const pts = s.values.map((v, i) => ({
+      x: pad.left + (i / (n - 1 || 1)) * chartW,
+      y: pad.top + chartH - (v / niceMax) * chartH
+    }));
+
+    if (isArea) {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pad.top + chartH);
+      pts.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.lineTo(pts[pts.length-1].x, pad.top + chartH);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(s.color, 0.14);
+      ctx.fill();
+
+      // Hatch
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pad.top + chartH);
+      pts.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.lineTo(pts[pts.length-1].x, pad.top + chartH);
+      ctx.closePath();
+      ctx.clip();
+      ctx.strokeStyle = hexToRgba(s.color, 0.15);
+      ctx.lineWidth = 0.8;
+      for (let hx = pad.left - chartH; hx < pad.left + chartW + chartH; hx += 8) {
+        ctx.beginPath();
+        ctx.moveTo(hx, pad.top);
+        ctx.lineTo(hx + chartH, pad.top + chartH);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Line
+    ctx.beginPath();
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = sw;
+    ctx.lineJoin = 'round';
+    ctx.setLineDash([]);
+    pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+
+    // Dots
+    pts.forEach(p => {
+      ctx.beginPath();
+      ctx.fillStyle = '#f2ead8';
+      ctx.arc(p.x, p.y, sw + 2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = sw * 0.7;
+      ctx.stroke();
+    });
+  });
+}
+
+function drawScatter(ctx, pad, chartW, chartH) {
+  const maxVal = getMaxVal();
+  const niceMax = Math.ceil(maxVal * 1.1 / 10) * 10;
+  const labels = getAllLabels();
+  const n = labels.length;
+  const sw = strokeWeight();
+
+  state.series.forEach((s) => {
+    s.values.forEach((v, i) => {
+      const x = pad.left + (i / (n - 1 || 1)) * chartW;
+      const y = pad.top + chartH - (v / niceMax) * chartH;
+      ctx.beginPath();
+      ctx.fillStyle = hexToRgba(s.color, 0.7);
+      ctx.arc(x, y, sw + 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = sw * 0.5;
+      ctx.stroke();
+    });
+  });
+}
+
+function drawPie(ctx, W, H, isDonut) {
+  const vals = state.series.flatMap((s, si) =>
+    s.values.map((v, vi) => ({ v, label: s.labels[vi] || s.name, color: si > 0 ? adjustColor(s.color, vi) : PALETTE[vi % PALETTE.length] || s.color }))
+  );
+
+  if (!vals.length) return;
+
+  const total = vals.reduce((a, b) => a + b.v, 0);
+  const cx = W / 2, cy = H / 2;
+  const r = Math.min(W, H) * 0.34;
+  let startAngle = -Math.PI / 2;
+  const sw = strokeWeight();
+
+  vals.forEach((item) => {
+    const slice = (item.v / total) * Math.PI * 2;
+    const endAngle = startAngle + slice;
+    const midAngle = startAngle + slice / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = hexToRgba(item.color, 0.25);
+    ctx.fill();
+
+    // Hatch
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.clip();
+    ctx.strokeStyle = hexToRgba(item.color, 0.3);
+    ctx.lineWidth = 0.8;
+    for (let hx = cx - r * 2; hx < cx + r * 2; hx += 7) {
+      ctx.beginPath();
+      ctx.moveTo(hx, cy - r * 2);
+      ctx.lineTo(hx + r * 2, cy + r * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth = sw;
+    ctx.stroke();
+
+    // Donut hole
+    if (isDonut) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.45, 0, Math.PI * 2);
+      const bg = ctx.createLinearGradient(cx - r*0.5, cy - r*0.5, cx + r*0.5, cy + r*0.5);
+      bg.addColorStop(0, '#f5edda');
+      bg.addColorStop(1, '#ede3cc');
+      ctx.fillStyle = bg;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(139,105,20,0.3)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // Labels
+    const lx = cx + Math.cos(midAngle) * r * 0.72;
+    const ly = cy + Math.sin(midAngle) * r * 0.72;
+    const pct = Math.round((item.v / total) * 100);
+    if (pct > 4) {
+      ctx.fillStyle = item.color;
+      ctx.font = `bold 11px "Crimson Pro", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${pct}%`, lx, ly);
+    }
+
+    startAngle = endAngle;
+  });
+
+  ctx.textBaseline = 'alphabetic';
+}
+
+function drawLegend(ctx, W, H) {
+  const items = state.series.map(s => ({ label: s.name, color: s.color }));
+  if (!items.length) return;
+
+  const itemH = 18;
+  const boxW = 130;
+  const boxH = items.length * itemH + 16;
+  const bx = W - 30 - boxW;
+  const by = 30;
+
+  ctx.fillStyle = 'rgba(242,234,216,0.85)';
+  ctx.strokeStyle = 'rgba(139,105,20,0.35)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.rect(bx, by, boxW, boxH);
+  ctx.fill();
+  ctx.stroke();
+
+  items.forEach((item, i) => {
+    const iy = by + 10 + i * itemH;
+    ctx.fillStyle = hexToRgba(item.color, 0.85);
+    ctx.beginPath();
+    ctx.rect(bx + 8, iy + 3, 10, 10);
+    ctx.fill();
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+
+    ctx.fillStyle = '#2a1f0e';
+    ctx.font = `12px "Crimson Pro", serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(item.label, bx + 24, iy + 12);
+  });
+}
+
+function drawAnnotations(ctx) {
+  annotations.forEach(ann => {
+    ctx.fillStyle = 'rgba(139,105,20,0.9)';
+    ctx.font = `italic 11px "IM Fell English", serif`;
+    ctx.textAlign = 'left';
+
+    // Pin
+    ctx.beginPath();
+    ctx.arc(ann.x, ann.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Line
+    ctx.strokeStyle = 'rgba(139,105,20,0.5)';
+    ctx.lineWidth = 0.7;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath();
+    ctx.moveTo(ann.x, ann.y);
+    ctx.lineTo(ann.x + 15, ann.y - 20);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Text
+    ctx.fillText(ann.text, ann.x + 18, ann.y - 22);
+  });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function adjustColor(hex, offset) {
+  return PALETTE[(PALETTE.indexOf(hex) + offset + 1) % PALETTE.length] || hex;
+}
+
+init();
+</script>
+
+</body>
+</html>
